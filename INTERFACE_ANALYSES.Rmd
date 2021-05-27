@@ -1,0 +1,395 @@
+---
+title: "INTERFACE ANALYSES"
+author: "Matthew J Shannon"
+date: "11/05/2021"
+output: html_document
+---
+
+```{r}
+devtools::install_github ('chris-mcginnis-ucsf/DoubletFinder')
+devtools::install_github ('satijalab/seurat-wrappers')
+remotes::install_github  ("mojaveazure/seurat-disk")
+devtools::install_github ("velocyto-team/velocyto.R")
+BiocManager::install     ("pcaMethods")
+BiocManager::install     ('MAST')
+BiocManager::install     ('org.Hs.eg.db')
+BiocManager::install     (version = "3.12")
+BiocManager::install     ('Seurat')
+BiocManager::install     ('readxl')
+BiocManager::install     ('modes')
+BiocManager::install     ('pheatmap')
+BiocManager::install     ('limma')
+BiocManager::install     ('clustree')
+BiocManager::install     ('clusterProfiler')
+BiocManager::install     ('EnhancedVolcano')
+install.packages         ('fields')
+install.packages         ('plotly')
+install.packages         ("VennDiagram")
+library                  (Seurat)
+library                  (Matrix)
+library                  (dplyr)
+library                  (ggplot2)
+library                  (cowplot)
+library                  (tibble)
+library                  (readxl)
+library                  (sctransform)
+library                  (fields)
+library                  (KernSmooth)
+library                  (ROCR)
+library                  (parallel)
+library                  (reshape2)
+library                  (pheatmap)
+library                  (DoubletFinder)
+library                  (limma)
+library                  (SeuratWrappers)
+library                  (SeuratDisk)
+library                  (plotly)
+library                  (clustree)
+library                  (velocyto.R)
+library                  (MAST)
+library                  (EnhancedVolcano)
+library                  (clusterProfiler)
+library                  (AnnotationDbi)
+library                  (org.Hs.eg.db)
+library                  (VennDiagram)
+library                  (RColorBrewer)
+```
+
+```{r, Supplemental Figure 1E}
+pdf        ("Interface_Source_PCA.pdf", width = 10, height = 10)
+PCAPlot    (Interface,
+            label      = FALSE,
+            label.size = 15,
+            pt.size    = 3,
+            group.by   = "Source") + 
+            theme    (text          = element_text (size = 40))     + 
+            theme    (axis.text     = element_text (size = 35))     + 
+            theme    (axis.title.x  = element_text (face = "bold")) +
+            theme    (axis.title.y  = element_text (face = "bold")) +
+            NoLegend ()
+dev.off    ()
+
+pdf        ("Interface_Tissue_PCA.pdf", width = 10, height = 10)
+PCAPlot    (Interface,
+            label      = FALSE,
+            label.size = 15,
+            pt.size    = 3,
+            order      = FALSE,
+            group.by   = "Tissue") + 
+            theme    (text          = element_text (size = 40))     + 
+            theme    (axis.text     = element_text (size = 35))     + 
+            theme    (axis.title.x  = element_text (face = "bold")) +
+            theme    (axis.title.y  = element_text (face = "bold")) +
+            NoLegend ()
+dev.off    ()
+```
+
+```{r, Supplemetnal figure 1F}
+pdf         ("Interface_10X_UMAP.pdf", width = 10, height = 10)
+UMAPPlot    (Interface,
+             label      = FALSE,
+             label.size = 15,
+             pt.size    = 3) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+```
+
+```{r}
+# Re-run UMAPs that you have accurate calculations for all UMAP(s)
+     Interface3D <- RunUMAP (Interface, dims = 1:50, n.components = 3L)
+
+# Extract UMAP information from Seurat Object
+          umap_1 <- Interface3D [["umap"]]@cell.embeddings [ , 1]
+          umap_2 <- Interface3D [["umap"]]@cell.embeddings [ , 2]
+          umap_3 <- Interface3D [["umap"]]@cell.embeddings [ , 3]
+
+# Visualize what headings are called so that you can extract them to form a dataframe
+Embeddings (object = Interface3D, reduction = "umap")
+
+# Prepare a dataframe for cell plotting
+       plot.data <- FetchData (object = Interface3D, vars = c("UMAP_1", "UMAP_2", "UMAP_3", "seurat_clusters"))
+
+# Make a column of row name identities (these will be your cell/barcode names)
+ plot.data$label <- paste (plot.data$seurat_clusters)
+
+# Plot your data
+plot_ly (data      =  plot.data, 
+         x         = ~UMAP_1,
+         y         = ~UMAP_2,
+         z         = ~UMAP_3, 
+         color     = ~seurat_clusters,
+         type      = "scatter3d", 
+         mode      = "markers", 
+         marker    = list (size = 5, width = 2), 
+         text      = ~label,
+         hoverinfo = "text" )                    
+rm      (Interface3D)
+```
+
+```{r, Supplemental Figure 1G}
+pdf         ("Interface_GA_10X_UMAP.pdf", width = 20, height = 10)
+UMAPPlot    (Interface,
+             label      = FALSE,
+             label.size = 15,
+             pt.size    = 3,
+             split.by   = "GA") + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+```
+
+```{r}
+Clust.Interface <- BuildClusterTree (Interface)
+                   PlotClusterTree  (Clust.Interface)
+```
+
+```{r}
+ColorDimSplit (Clust.Interface, node = 9)
+ColorDimSplit (Clust.Interface, node = 10)
+ColorDimSplit (Clust.Interface, node = 11)
+ColorDimSplit (Clust.Interface, node = 12)
+ColorDimSplit (Clust.Interface, node = 13)
+ColorDimSplit (Clust.Interface, node = 14)
+ColorDimSplit (Clust.Interface, node = 15)
+```
+
+```{r}
+DefaultAssay  (object = Interface) <- "RNA"
+
+Interface.markers <- FindAllMarkers (object     = Interface,
+                                       only.pos = TRUE,
+                                       test.use = "MAST")
+```
+
+```{r}
+Interface.markers %>% group_by (cluster) %>% top_n (20, avg_logFC)
+```
+
+```{r, Supplemental figure 1H}
+DefaultAssay  (object = Interface) <- "RNA"
+
+cluster.averages <- AverageExpression (Interface, return.seurat = TRUE)
+
+Genes <- c( "CD34",   "ITGA2",  "KIT",      "ENTPD1",  "ITGAX", "NCAM1",  "HLA-A",  "HLA-B",  "HLA-C",  "PTPRC",
+            "KLRB1",  "CD8A",   "IL7R",     "MS4A2",   "CD3G",  "FOXP3",  "FCER1A", "CD1C",   "CLEC9A", "S100A12",
+            "IL1B",   "FCGR3A", "CD14",     "CD4",     "LYVE1", "MKI67",  "VCAM1",  "COL6A2", "DLK1",   "PDGFRB",
+            "MCAM",   "ITGA1",  "ACTA2",    "MYH11",   "DKK1",  "IGFBP1", "CD59",   "PRL",    "VIM",    "EPCAM",
+            "BCAM",   "TP63",   "ITGA6",    "NANOG",   "YAP1",  "CDX2",   "TEAD4",  "PAGE4",  "TFAP2C", "EGFR",
+            "TFAP2A", "ERVW-1", "ERVFRD-1", "LGALS13", "ERVV-1","SDC1",   "CGB",    "GATA2",  "GATA3",  "KRT7", "HLA-G", "ITGA5")
+
+my_levels <- c("13", "22", "2",  "26", "1",  "19", "5", "20", "14", "30",
+               "3",  "25", "16", "27", "15", "10", "4", "24", "6",  "23",
+               "28", "29", "21", "8",  "11", "0",  "7", "18", "17", "12", "9")
+
+cluster.averages@active.ident <- factor (cluster.averages@active.ident, levels = my_levels)
+
+pdf                  ("Interface_markers_heat.pdf", width = 15, height = 20)
+DoHeatmap            (cluster.averages,
+                      features     = Genes,
+                      size         = 5,
+                      angle        = 270,
+                      hjust        = 1,
+                      group.bar    = FALSE,
+                      draw.lines   = FALSE,
+                      raster       = FALSE) +
+scale_fill_gradientn (colours      = colorRampPalette (rev (brewer.pal (n = 7, name = "RdYlBu"))) (100)) +
+theme                (text         = element_text     (size  = 40)) + 
+theme                (axis.text    = element_text     (size  = 25)) + 
+theme                (axis.title.y = element_text     (face  = "bold")) +
+theme                (axis.text.y  = element_text     (face  = "italic", hjust = 1)) +
+theme                (axis.text.x  = element_text     (vjust = 0.5, hjust = 0, face = "bold", angle = 270)) + 
+theme                (legend.text  = element_text     (size  = 15)) +
+NoLegend             ()
+dev.off              ()
+
+rm (cluster.averages)
+```
+
+```{r, Supplemental figure 1I}
+pdf                ("Interface_Phase_Proportions_10X.pdf", width = 20, height = 15)
+ggplot             (Interface@meta.data, aes (x = c(Interface$seurat_clusters),    fill = Interface$Phase)) + 
+geom_bar           (position     = "fill") + 
+theme_classic2     () +
+scale_y_continuous (labels       = scales::percent) +
+theme              (text         = element_text (size  = 35)) + 
+theme              (axis.text    = element_text (size  = 35)) + 
+theme              (axis.title.x = element_text (face  = "bold")) +
+theme              (axis.title.y = element_text (face  = "bold")) + 
+theme              (legend.text  = element_text (size  = 15)) +
+theme              (axis.text.y  = element_text (angle = 90)) +
+theme              (axis.text.y  = element_text (hjust = 0.5)) +
+theme              (axis.text.x  = element_text(colour = "black")) +
+theme              (axis.text.y  = element_text(colour = "black")) +
+xlab               ("Cluster") +
+ylab               ("Cell Phase Proportion") + 
+theme              (strip.background = element_blank (), text = element_text (face  = "bold", size = 50))
+dev.off            ()
+```
+
+```{r, Supplemental figure 1J}
+DefaultAssay (object = Interface) <- "RNA"
+
+pdf         ("Interface_10X_VIM.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("VIM"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_PTPRC.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("PTPRC"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_CD34.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("CD34"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_VCAM1.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("VCAM1"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_ACTA2.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("ACTA2"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+DefaultAssay (object = Interface) <- "integrated"
+```
+
+```{r, Supplemental figure 1K}
+DefaultAssay (object = Interface) <- "RNA"
+
+pdf         ("Interface_10X_KRT7.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("KRT7"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_EGFR.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("EGFR"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_TP63.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("TP63"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_TFAP2A.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("TFAP2A"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Interface_10X_TFAP2C.pdf", width = 10, height = 10)
+FeaturePlot (Interface,
+             features   = c("TFAP2C"),
+             label      = FALSE,
+             pt.size    = 3,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) 
+             NoLegend ()
+dev.off     ()
+```
+

@@ -1,0 +1,529 @@
+---
+title: "TROPHOBLAST ANALYSES"
+author: "Matthew J Shannon"
+date: "11/05/2021"
+output: html_document
+---
+
+# Load in all dependencies
+
+```{r}
+devtools::install_github ('chris-mcginnis-ucsf/DoubletFinder')
+devtools::install_github ('satijalab/seurat-wrappers')
+remotes::install_github  ("mojaveazure/seurat-disk")
+devtools::install_github ("velocyto-team/velocyto.R")
+BiocManager::install     ("pcaMethods")
+BiocManager::install     ('MAST')
+BiocManager::install     ('org.Hs.eg.db')
+BiocManager::install     (version = "3.12")
+BiocManager::install     ('Seurat')
+BiocManager::install     ('readxl')
+BiocManager::install     ('modes')
+BiocManager::install     ('pheatmap')
+BiocManager::install     ('limma')
+BiocManager::install     ('clustree')
+BiocManager::install     ('clusterProfiler')
+BiocManager::install     ('EnhancedVolcano')
+install.packages         ('fields')
+install.packages         ('plotly')
+install.packages         ("VennDiagram")
+install.packages         ("xlsx")
+library                  (Seurat)
+library                  (Matrix)
+library                  (dplyr)
+library                  (ggplot2)
+library                  (cowplot)
+library                  (tibble)
+library                  (readxl)
+library                  (sctransform)
+library                  (fields)
+library                  (KernSmooth)
+library                  (ROCR)
+library                  (parallel)
+library                  (reshape2)
+library                  (pheatmap)
+library                  (DoubletFinder)
+library                  (limma)
+library                  (SeuratWrappers)
+library                  (SeuratDisk)
+library                  (plotly)
+library                  (clustree)
+library                  (velocyto.R)
+library                  (MAST)
+library                  (EnhancedVolcano)
+library                  (clusterProfiler)
+library                  (AnnotationDbi)
+library                  (org.Hs.eg.db)
+library                  (VennDiagram)
+library                  (RColorBrewer)
+library                  (ggpubr)
+library                  (plotly)
+library                  (xlsx)
+```
+
+# Trophoblast Data Analyses
+
+```{r, Figure 1B}
+pdf         ("Trophoblasts_10X_UMAP.pdf", width = 10, height = 10)
+UMAPPlot    (Trophoblasts,
+             label      = TRUE,
+             label.size = 15,
+             pt.size    = 5,
+             cols       = c('CTB 4'  = '#CD9600',
+                            'CTB 3'  = '#7CAE00',
+                            'CTB 1'  = '#F8766D',
+                            'CTB 2'  = '#00BE67',
+                            'cCTB 1' = '#00BFC4',
+                            'cCTB 2' = '#FF61CC',
+                            'EVT'    = '#C77CFF',
+                            'SCTp'   = '#00A9FF' )) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+```
+
+```{r, Supplemental Figure 2}
+# Re-run UMAPs that you have accurate calculations for all UMAP(s)
+  Trophoblasts3D <- RunUMAP (Trophoblasts, dims = 1:50, n.components = 3L)
+
+# Extract UMAP information from Seurat Object
+          umap_1 <- Trophoblasts3D [["umap"]]@cell.embeddings [ , 1]
+          umap_2 <- Trophoblasts3D [["umap"]]@cell.embeddings [ , 2]
+          umap_3 <- Trophoblasts3D [["umap"]]@cell.embeddings [ , 3]
+
+# Visualize what headings are called so that you can extract them to form a dataframe
+Embeddings (object = Trophoblasts3D, reduction = "umap")
+
+# Prepare a dataframe for cell plotting
+       plot.data <- FetchData (object = Trophoblasts3D, vars = c("UMAP_1", "UMAP_2", "UMAP_3", "seurat_clusters"))
+
+# Make a column of row name identities (these will be your cell/barcode names)
+ plot.data$label <- paste (plot.data$seurat_clusters)
+
+# Plot your data, in this example my Seurat object had 21 clusters (0-20)
+ Trophoblasts3D2 <- plot_ly (data      =  plot.data, 
+                              x         = ~UMAP_1,
+                              y         = ~UMAP_2,
+                              z         = ~UMAP_3, 
+                              color     = ~seurat_clusters, 
+                              colors    = c("#F8766D",
+                                            "#00BE67",
+                                            "#7CAE00",
+                                            "#CD9600",
+                                            "#00BFC4",
+                                            "#C77CFF",
+                                            "#00A9FF",
+                                            "#FF61CC" ),
+                              type      = "scatter3d", 
+                              mode      = "markers", 
+                              marker    = list (size = 5, width = 2), # Controls size of points
+                              text      = ~label,                     # This is that extra column we made earlier for which we will use for cell ID
+                              hoverinfo = "text" )                    # Hovering your mouse pointer over a point shows cell names
+
+Trophoblasts3D2
+htmlwidgets::saveWidget      (Trophoblasts3D2, "3D_VILLI_UMAP.html")
+rm                           (Trophoblasts3D)
+rm                           (Trophoblasts3D2)
+```
+
+```{r}
+DefaultAssay (Trophoblasts) <- "RNA"
+FeaturePlot  (Trophoblasts, features = c("ERVFRD-1"), min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("ERVV-1"),   min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("SDC1"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("TFAP2A"),   min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("GATA2"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("GATA3"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("KRT7"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("HLA-G"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("ITGA5"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("ITGA1"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("NOTCH2"),   min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("NOTCH1"),   min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("ITGA2"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("SOX9"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("EGFR"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("TFAP2C"),   min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("YAP1"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("TP63"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("ITGA6"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("CDX2"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("ELF5"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("BMP4"),     min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("PAGE4"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("TEAD4"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("MKI67"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+FeaturePlot  (Trophoblasts, features = c("CCNA2"),    min.cutoff = 0, order = TRUE, cols = c("grey", "red"))
+DefaultAssay (Trophoblasts) <- "integrated"
+```
+
+```{r}
+VlnPlot (Trophoblasts, features = c("ERVFRD-1"), assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("ERVV-1"),   assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("SDC1"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("TFAP2A"),   assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("GATA2"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("GATA3"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("KRT7"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("HLA-G"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("ITGA5"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("ITGA1"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("NOTCH2"),   assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("NOTCH1"),   assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("ITGA2"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("SOX9"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("EGFR"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("TFAP2C"),   assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("YAP1"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("TP63"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("ITGA6"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("CDX2"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("ELF5"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("BMP4"),     assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("PAGE4"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("TEAD4"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("MKI67"),    assay = "RNA", split.by = "GA")
+VlnPlot (Trophoblasts, features = c("CCNA2"),    assay = "RNA", split.by = "GA")
+```
+
+```{r, Figure 1C}
+cluster.averages <- AverageExpression (Trophoblasts, return.seurat = TRUE)
+
+genelist <- c("ERVFRD-1", "ERVV-1", "SDC1",  "TFAP2A",                                  # SCTp markers
+              "GATA2",    "GATA3",  "KRT7",                                             # CTB markers
+              "HLA-G",    "ITGA5",  "ITGA1", "NOTCH2", "NOTCH1",                        # EVT markers
+              "ITGA2",    "SOX9",                                                       # Column progenitor CTB marker
+              "EGFR",     "TFAP2C",                                                     # CTB markers
+              "YAP1",     "TP63",   "ITGA6", "CDX2",  "ELF5", "BMP4", "PAGE4", "TEAD4", # Progenitor CTB markers
+              "MKI67",    "CCNA2")                                                      # Proliferative markers
+
+my_levels <- c("CTB 4", "CTB 3", "CTB 2", "CTB 1", "cCTB 1", "cCTB 2", "EVT", "SCTp")
+
+cluster.averages@active.ident <- factor (cluster.averages@active.ident, levels = my_levels)
+
+pdf                  ("Troph_Markers_10X.pdf", width = 15, height = 20)
+DoHeatmap            (cluster.averages,
+                      features     = genelist,
+                      size         = 5,
+                      angle        = 270,
+                      hjust        = 1,
+                      group.bar    = FALSE,
+                      draw.lines   = FALSE,
+                      raster       = FALSE) +
+scale_fill_gradientn (colours      = colorRampPalette (rev (brewer.pal (n = 7, name = "RdYlBu"))) (100)) +
+theme                (text         = element_text     (size  = 40)) + 
+theme                (axis.text    = element_text     (size  = 35)) + 
+theme                (axis.title.y = element_text     (face  = "bold")) +
+theme                (axis.text.y  = element_text     (face  = "italic", hjust = 1)) +
+theme                (axis.text.x  = element_text     (vjust = 0.5, hjust = 0, face = "bold", angle = 270)) + 
+theme                (legend.text  = element_text     (size  = 15)) +
+NoLegend             ()
+dev.off              ()
+rm                   (cluster.averages)
+```
+
+```{r}
+Clust.Trophoblast <- BuildClusterTree (Trophoblasts)
+                     PlotClusterTree  (Clust.Trophoblast)
+```
+
+```{r}
+ColorDimSplit (Clust.Trophoblast, node = 9)
+ColorDimSplit (Clust.Trophoblast, node = 10)
+ColorDimSplit (Clust.Trophoblast, node = 11)
+ColorDimSplit (Clust.Trophoblast, node = 12)
+ColorDimSplit (Clust.Trophoblast, node = 13)
+ColorDimSplit (Clust.Trophoblast, node = 14)
+ColorDimSplit (Clust.Trophoblast, node = 15)
+```
+
+```{r}
+DefaultAssay  (object = Trophoblasts) <- "RNA"
+
+Trophoblast.markers <- FindAllMarkers (object   = Trophoblasts,
+                                       only.pos = TRUE,
+                                       min.pct  = 0.25, 
+                                       test.use = "MAST")
+```
+
+```{r}
+Trophoblast.markers %>% group_by (cluster) %>% top_n (20, avg_logFC)
+```
+
+```{r, Table 2}
+write.xlsx (Trophoblast.markers, file = "Trophoblast.markers.xlsx")
+```
+
+```{r, Figure 1D}
+pdf                ("Cell_Proportions_10X.pdf", width = 5, height = 20)
+ggplot             (Trophoblasts@meta.data, aes (x = c(Trophoblasts$GA), fill = Trophoblasts$CellType)) + 
+geom_bar           (position     = "fill") + 
+theme_classic2     () +
+scale_y_continuous (labels       = scales::percent) +
+theme              (text         = element_text (size  = 35)) + 
+theme              (axis.text    = element_text (size  = 35)) + 
+theme              (axis.title.x = element_text (face  = "bold")) +
+theme              (axis.title.y = element_text (face  = "bold")) + 
+theme              (legend.text  = element_text (size  = 15)) +
+theme              (axis.text.y  = element_text (angle = 90)) +
+theme              (axis.text.y  = element_text (hjust = 0.5)) +
+theme              (axis.text.x  = element_text(colour = "black")) +
+theme              (axis.text.y  = element_text(colour = "black")) +
+xlab               ("Gestational Age") +
+ylab               ("Cell Proportion") +
+scale_fill_manual  (values     = c('0' = '#F8766D',
+                                   '1' = '#00BE67',
+                                   '2' = '#7CAE00',
+                                   '3' = '#CD9600',
+                                   '4' = '#00BFC4',
+                                   '5' = '#C77CFF',
+                                   '6' = '#00A9FF',
+                                   '7' = '#FF61CC' )) +
+NoLegend           ()
+dev.off            ()
+```
+
+```{r, Figure 2B feature plots}
+pdf         ("Trophoblasts_10X_CDX2.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("CDX2"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Trophoblasts_10X_TEAD4.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("TEAD4"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Trophoblasts_10X_EPCAM.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("EPCAM"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Trophoblasts_10X_TP63.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("TP63"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Trophoblasts_10X_YAP1.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("YAP1"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+
+pdf         ("Trophoblasts_10X_ELF5.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("ELF5"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+```
+
+```{r, Figure 2B violin plots}
+pdf     ("CDX2_vln_GA.pdf", width = 3, height = 10)
+VlnPlot (Trophoblasts, features = c("CDX2"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off ()
+
+pdf     ("TEAD4_vln_GA.pdf", width = 3, height = 10)
+VlnPlot (Trophoblasts, features = c("TEAD4"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off ()
+
+pdf     ("EPCAM_vln_GA.pdf", width = 3, height = 10)
+VlnPlot (Trophoblasts, features = c("EPCAM"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off ()
+
+pdf     ("TP63_vln_GA.pdf", width = 3, height = 10)
+VlnPlot (Trophoblasts, features = c("TP63"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off ()
+
+pdf     ("YAP1_vln_GA.pdf", width = 3, height = 10)
+VlnPlot (Trophoblasts, features = c("YAP1"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off ()
+
+pdf     ("ELF5_vln_GA.pdf", width = 3, height = 10)
+VlnPlot (Trophoblasts, features = c("ELF5"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off ()
+```
+
+```{r, Figure 2E}
+pdf         ("Trophoblasts_10X_BCAM.pdf", width = 10, height = 10)
+FeaturePlot (Trophoblasts,
+             features   = c("BCAM"),
+             label      = FALSE,
+             pt.size    = 5,
+             min.cutoff = 0,
+             order      = TRUE,
+             cols       = c("grey", "red")) + 
+             theme    (text          = element_text (size = 40))     + 
+             theme    (axis.text     = element_text (size = 35))     + 
+             theme    (axis.title.x  = element_text (face = "bold")) +
+             theme    (axis.title.y  = element_text (face = "bold")) +
+             NoLegend ()
+dev.off     ()
+
+pdf         ("BCAM_vln_GA.pdf", width = 3, height = 10)
+VlnPlot     (Trophoblasts, features = c("BCAM"), assay = "RNA", pt.size = 0) + NoLegend ()
+dev.off     ()
+```
+
+# CTB specific analyses
+
+```{r}
+DefaultAssay   (object = Trophoblasts) <- "RNA"
+
+CTBs <- subset (Trophoblasts, idents =  c("CTB 1", "CTB 2", "CTB 3", "CTB 4"))
+                        
+DefaultAssay   (object = CTBs) <- "integrated"
+                         CTBs
+```
+
+```{r}
+UMAPPlot (CTBs,
+          label   = TRUE,
+          pt.size = 2,
+          cols    = c('CTB 1' = '#F8766D',
+                      'CTB 2' = '#00BE67',
+                      'CTB 3' = '#7CAE00',
+                      'CTB 4' = '#CD9600')) + NoLegend ()
+```
+
+```{r}
+Clust.CTB <- BuildClusterTree (CTBs)
+             PlotClusterTree  (Clust.CTB)
+```
+
+```{r}
+ColorDimSplit (Clust.CTB, node = 5)
+ColorDimSplit (Clust.CTB, node = 6)
+ColorDimSplit (Clust.CTB, node = 7)
+```
+
+```{r}
+DefaultAssay  (object = CTBs) <- "RNA"
+
+CTB.markers <- FindAllMarkers (object   = CTBs,
+                               only.pos = TRUE,
+                               test.use = "MAST")
+```
+
+```{r}
+CTB.markers %>% group_by (cluster) %>% top_n (10, avg_log2FC)
+```
+
+```{r}
+CTB2_markers <- FindMarkers (object          = CTBs,
+                             ident.1         = "CTB 2",
+                             ident.2         = NULL,
+                             assay           = "RNA",
+                             test.use        = "MAST",
+                             logfc.threshold = 0.3,
+                             min.pct         = -Inf,
+                             min.diff.pct    = -Inf,
+                             only.pos        = TRUE,
+                             slot            = "data")
+
+CTB3_markers <- FindMarkers (object          = CTBs,
+                             ident.1         = "CTB 3",
+                             ident.2         = NULL,
+                             assay           = "RNA",
+                             test.use        = "MAST",
+                             logfc.threshold = 0.3,
+                             min.pct         = -Inf,
+                             min.diff.pct    = -Inf,
+                             only.pos        = TRUE,
+                             slot            = "data")
+```
+
+```{r, Figure 2C}
+venn.diagram (x              = list (row.names (CTB2_markers),
+                                     row.names (CTB3_markers)),
+              category.names = c    ("CTB 2", "CTB 3"),
+              filename       = 'CTBprogenitor_Venn_final.png',
+              output         = TRUE,
+              imagetype      = "png",
+              scaled         = FALSE,
+              col            = "black",
+              fill           = c    ("#00BE67", "#7CAE00"),
+              cat.col        = c    ("#00BE67", "#7CAE00"),
+              cat.cex        = 2,
+              margin         = 0.15)
+```
+
+```{r}
+Venn_table <- get.venn.partitions (x             = list (row.names (CTB2_markers),
+                                                         row.names (CTB3_markers)),
+                                   force.unique  = TRUE,
+                                   keep.elements = TRUE,
+                                   hierarchical  = FALSE)
+Venn_table
+Venn_table$..values..
+ 
+FVenn1 <- Venn_table$..values..$`1`
+FVenn2 <- Venn_table$..values..$`2`
+FVenn3 <- Venn_table$..values..$`3`
+```
+
+```{r, Table 3}
+write.xlsx (FVenn1, file = "Fig2_venn1.xlsx")
+write.xlsx (FVenn2, file = "Fig2_venn2.xlsx")
+write.xlsx (FVenn3, file = "Fig2_venn3.xlsx")
+```
